@@ -1,0 +1,56 @@
+{
+	"applicationId": "js.neutralino.sample",
+	"version": "1.0.0",
+	"defaultMode": "window",
+	"documentRoot": "/dist/",
+	"url": "/",
+	"enableServer": true,
+	"enableNativeAPI": true,
+	"tokenSecurity": "none",
+	"logging": {
+		"enabled": true,
+		"writeToLogFile": true
+	},
+	"nativeAllowList": [
+		"filesystem.*",
+		"window.*",
+		"app.*",
+		"computer.*",
+		"os.*"
+	],
+	"globalVariables": {
+		"TEST1": "Hello"
+	},
+	"modes": {
+		"window": {
+			"title": "Kiosk Application",
+			"width": 800,
+			"height": 600,
+			"minWidth": 400,
+			"minHeight": 400,
+			"fullScreen": true,
+			"alwaysOnTop": true,
+			"icon": "/public/neutralino.png",
+			"enableInspector": false,
+			"borderless": true,
+			"maximize": true,
+			"hidden": false,
+			"resizable": false,
+			"exitProcessOnClose": true
+		}
+	},
+	"cli": {
+		"binaryName": "neutralinojs",
+		"resourcesPath": "/dist/",
+		"extensionsPath": "/extensions/",
+		"binaryVersion": "6.0.0",
+		"clientVersion": "6.0.0",
+		"frontendLibrary": {
+			"patchFile": "./index.html",
+			"projectPath": "./",
+			"devUrl": "http://localhost:5173",
+			"devCommand": "yarn vite-dev",
+			"buildCommand": "yarn vite-build"
+		}
+	}
+}
