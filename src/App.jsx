@@ -9,6 +9,7 @@ import SnacksInfo from './components/SnacksInfo';
 import DeviceRegistration from './components/DeviceRegistration';
 import SessionStateManager from './components/SessionStateManager';
 import DeviceTokenMonitor from './components/DeviceTokenMonitor';
+import ScreenshotMonitor from './components/ScreenshotMonitor';
 import { useCollection } from './hooks/useCollection';
 import { getSavedLoginInfo } from './utils/helper_functions';
 import pbclient from '@/lib/pocketbase/pb';
@@ -460,6 +461,9 @@ function App() {
 
 			{/* Device token monitor - invisible component that monitors device token */}
 			{deviceId && <DeviceTokenMonitor deviceId={deviceId} onAutoLogin={handleAutoLogin} />}
+
+			{/* Screenshot monitor - invisible component that monitors for screenshot requests */}
+			{deviceId && isLoggedIn && <ScreenshotMonitor deviceId={deviceId} />}
 
 			{showDeviceRegistration ? (
 				<div className="mt-16">

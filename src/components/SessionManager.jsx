@@ -282,15 +282,30 @@ function SessionManager({ userId, activeSession, sessionData: sessionDataProp })
     // Show OS-level notification if requested
     if (isSystemNotification) {
       try {
-        // Use Neutralino API for notifications
-        if (window.Neutralino && window.Neutralino.os) {
+        // Try Neutralino API first (for desktop apps)
+        if (window.Neutralino && window.Neutralino.os && window.Neutralino.os.showNotification) {
           window.Neutralino.os.showNotification({
             summary: 'Session Alert',
             body: message
           });
-          console.log("System notification sent:", message);
+          console.log("System notification sent via Neutralino:", message);
+        }
+        // Fallback to Web Notifications API (works in browsers)
+        else if ('Notification' in window) {
+          // Request permission if needed
+          if (Notification.permission !== 'granted') {
+            Notification.requestPermission().then(permission => {
+              if (permission === 'granted') {
+                new Notification('Session Alert', { body: message });
+                console.log("System notification sent via Web Notifications API:", message);
+              }
+            });
+          } else {
+            new Notification('Session Alert', { body: message });
+            console.log("System notification sent via Web Notifications API:", message);
+          }
         } else {
-          console.warn("Neutralino API not available for notifications");
+          console.warn("No notification API available");
         }
       } catch (error) {
         console.error("Error showing system notification:", error);
@@ -491,36 +506,47 @@ function SessionManager({ userId, activeSession, sessionData: sessionDataProp })
 
           // Update session status to Closed if it's still active
           try {
-            // Get device ID from localStorage
+            // Get device ID from localStorage or from session data
             let deviceId = null;
-            try {
-              // First check user_login_info for device ID
-              const savedInfo = localStorage.getItem('user_login_info');
-              if (savedInfo) {
-                const parsedInfo = JSON.parse(savedInfo);
-                if (parsedInfo.deviceId) {
-                  deviceId = parsedInfo.deviceId;
-                }
-              }
 
-              // If not found in user_login_info, check device_info
-              if (!deviceId) {
-                const savedDeviceInfo = localStorage.getItem('device_info');
-                if (savedDeviceInfo) {
-                  const parsedDeviceInfo = JSON.parse(savedDeviceInfo);
-                  if (parsedDeviceInfo.deviceId) {
-                    deviceId = parsedDeviceInfo.deviceId;
+            // First check if we have device info already
+            if (deviceInfo && deviceInfo.id) {
+              deviceId = deviceInfo.id;
+              console.log("Using device ID from deviceInfo:", deviceId);
+            } else {
+              try {
+                // First check user_login_info for device ID
+                const savedInfo = localStorage.getItem('user_login_info');
+                if (savedInfo) {
+                  const parsedInfo = JSON.parse(savedInfo);
+                  if (parsedInfo.deviceId) {
+                    deviceId = parsedInfo.deviceId;
+                    console.log("Using device ID from user_login_info:", deviceId);
                   }
                 }
+
+                // If not found in user_login_info, check device_info
+                if (!deviceId) {
+                  const savedDeviceInfo = localStorage.getItem('device_info');
+                  if (savedDeviceInfo) {
+                    const parsedDeviceInfo = JSON.parse(savedDeviceInfo);
+                    if (parsedDeviceInfo.deviceId) {
+                      deviceId = parsedDeviceInfo.deviceId;
+                      console.log("Using device ID from device_info:", deviceId);
+                    }
+                  }
+                }
+              } catch (localStorageError) {
+                console.error("Error reading device ID from localStorage:", localStorageError);
               }
-            } catch (localStorageError) {
-              console.error("Error reading device ID from localStorage:", localStorageError);
             }
 
             // Calculate session cost and payment details
             const cost = sessionCost || 0;
             const discountAmount = 0;
             const discountRate = 0;
+
+            console.log(`Closing session ${sessionId} with cost: ₹${cost}`);
 
             // Update session with closed status and payment details
             await update(sessionId, {
@@ -530,12 +556,16 @@ function SessionManager({ userId, activeSession, sessionData: sessionDataProp })
               discount_rate: discountRate
             });
 
+            console.log("Session status updated to Closed");
+
             // Create a session log entry for closing
             await pbclient.collection('session_logs').create({
               session_id: sessionId,
               type: 'Closed',
               session_amount: cost
             });
+
+            console.log("Session log entry created for session closure");
 
             // Update device status to Available
             if (deviceId) {
@@ -549,14 +579,18 @@ function SessionManager({ userId, activeSession, sessionData: sessionDataProp })
               } catch (deviceUpdateError) {
                 console.error("Error updating device status:", deviceUpdateError);
               }
+            } else {
+              console.warn("No device ID found, cannot update device status");
             }
 
             setIsSessionActive(false);
 
             // Show session ended notification if not already shown
             if (!notificationShown) {
-              showNotification('Your session has ended.', true); // Use system notification
+              // Use system notification with high priority
+              showNotification('Your session has ended. The system will log you out in 5 seconds.', true);
               setNotificationShown(true);
+              console.log("Session ended notification shown");
 
               // Auto logout after session ends
               setTimeout(() => {
@@ -568,6 +602,9 @@ function SessionManager({ userId, activeSession, sessionData: sessionDataProp })
                   pbclient.authStore.clear();
                   console.log("Auth store cleared instead of page reload");
 
+                  // Show another notification about logout
+                  showNotification('You have been logged out due to session expiration.', true);
+
                   console.log("Auto logout triggered after session end");
                 } catch (logoutError) {
                   console.error("Error during auto logout:", logoutError);
@@ -576,6 +613,12 @@ function SessionManager({ userId, activeSession, sessionData: sessionDataProp })
             }
           } catch (updateError) {
             console.error("Error updating session status:", updateError);
+
+            // Even if update fails, still show notification
+            if (!notificationShown) {
+              showNotification('Your session has ended, but there was an error updating the session status.', true);
+              setNotificationShown(true);
+            }
           }
         }
         return;
@@ -611,7 +654,7 @@ function SessionManager({ userId, activeSession, sessionData: sessionDataProp })
       console.error('Error calculating remaining time:', error);
       setRemainingTime({ hours: 0, minutes: 0, seconds: 0 });
     }
-  }, [outTime, isSessionActive, sessionId, update, notificationShown, showNotification]);
+  }, [outTime, isSessionActive, sessionId, update, notificationShown, showNotification, deviceInfo, sessionCost]);
 
   // Function to check if the device has a token or client_record
   const checkDeviceTokenAndRecord = useCallback(async (deviceId) => {
