@@ -1,0 +1,55 @@
+{
+	"applicationId": "js.neutralino.sample",
+	"version": "1.0.0",
+	"defaultMode": "window",
+	"documentRoot": "/dist/",
+	"url": "/",
+	"port": 3000,
+	"enableServer": true,
+	"enableNativeAPI": true,
+	"tokenSecurity": "none", 
+	"logging": {
+		"enabled": true,
+		"writeToLogFile": true
+	},
+	"nativeAllowList": [
+		"filesystem.*",
+		"window.focus",
+		"app.exit"
+	],
+	"globalVariables": {
+		"TEST1": "Hello"
+	},
+	"modes": {
+		"window": {
+			"title": "neutralinojs",
+			"width": 800,
+			"height": 500,
+			"minWidth": 400,
+			"minHeight": 200,
+			"fullScreen": false,
+			"alwaysOnTop": false,
+			"icon": "/public/neutralino.png",
+			"enableInspector": false,
+			"borderless": false,
+			"maximize": false,
+			"hidden": false,
+			"resizable": true,
+			"exitProcessOnClose": false
+		}
+	},
+	"cli": {
+		"binaryName": "neutralinojs",
+		"resourcesPath": "/dist/",
+		"extensionsPath": "/extensions/",
+		"binaryVersion": "5.1.0",
+		"clientVersion": "5.1.0",
+		"frontendLibrary": {
+			"patchFile": "./index.html",
+			"projectPath": "./",
+			"devUrl": "http://localhost:5174",
+			"devCommand": "yarn vite-dev",
+			"buildCommand": "yarn vite-build"
+		}
+	}
+}
